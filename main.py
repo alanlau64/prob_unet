@@ -6,8 +6,8 @@ from cityscape.city_dataset import CityDataset
 from prob import ProbabilisticUnet
 from utils import l2_regularisation
 
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-dataset = CityDataset(location=r'D:\demo\\523\\final_pro\data\City\afterPre\quarter\train')
+device = torch.device('cuda' if False else 'cpu')
+dataset = CityDataset(location=r'D:\demo\\523\\final_pro\data\City\afterPre\half\train')
 dataset_size = len(dataset)
 indices = list(range(dataset_size))
 split = int(np.floor(0.1 * dataset_size))

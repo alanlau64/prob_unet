@@ -5,7 +5,7 @@ from utils import init_weights
 
 
 class DownConvBlock(nn.Module):
-    def __init__(self, input_dim, output_dim, initializer, padding, kernel_size=3, stride_size=2, pool=True):
+    def __init__(self, input_dim, output_dim, initializer, padding, kernel_size=3, stride_size=1, pool=True):
         super(DownConvBlock, self).__init__()
         layers = []
         if pool:
@@ -30,7 +30,7 @@ class DownConvBlock(nn.Module):
 
 
 class UpConvBlock(nn.Module):
-    def __init__(self, input_dim, output_dim, initializers, padding, kernel_size=2, stride_size=2, bilinear=True):
+    def __init__(self, input_dim, output_dim, initializers, padding, kernel_size=2, stride_size=2, bilinear=False):
         super(UpConvBlock, self).__init__()
         self.bilinear = bilinear
 
