@@ -1,5 +1,5 @@
-raw_data_dir = 'SET_INPUT_DIRECTORY_ABSOLUTE_PATH_HERE'
-out_dir = 'SET_OUTPUT_DIRECTORY_ABSOLUTE_PATH_HERE'
+raw_data_dir = 'D:\demo\\523\\final_pro\data\City'
+out_dir = 'D:\demo\\523\\final_pro\data\City\\afterPre'
 
 # settings:
 settings = {

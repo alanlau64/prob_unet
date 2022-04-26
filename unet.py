@@ -4,7 +4,7 @@ import numpy as np
 from utils import init_weights
 
 
-class DownConvBlock(nn.module):
+class DownConvBlock(nn.Module):
     def __init__(self, input_dim, output_dim, initializer, padding, kernel_size=3, stride_size=2, pool=True):
         super(DownConvBlock, self).__init__()
         layers = []

@@ -68,7 +68,10 @@ def preprocess(cf):
                                 label = resample(label, scale_factor=scale, interpolation=Image.NEAREST)
                             label_out_path = os.path.join(cf.out_dir, resolution_map[scale], set, city,
                                                           label_spec + '.npy')
-                            np.save(label_out_path, np.array(label).astype(np.uint8))
+                            label_arr = np.array(label).astype(np.uint8)
+                            if cf.data_format == 'NCHW' and channel_axis != 0:
+                                label_arr = label_arr[np.newaxis, :, :]
+                            np.save(label_out_path, label_arr)
 
 
 if __name__ == "__main__":
