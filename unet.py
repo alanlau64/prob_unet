@@ -38,7 +38,7 @@ class UpConvBlock(nn.Module):
             self.upconv_layer = nn.ConvTranspose2d(input_dim, output_dim, kernel_size=kernel_size, stride=stride_size)
             self.upconv_layer.apply(init_weights)
 
-        self.conv_block = DownConvBlock(input_dim, output_dim, initializers, padding, pool=False)
+        self.conv_block = DownConvBlock(2 * output_dim, output_dim, initializers, padding, pool=False)
 
     def forward(self, x, bridge):
         if self.bilinear:
@@ -86,10 +86,9 @@ class Unet(nn.Module):
 
         self.upsampling_path = nn.ModuleList()
 
-        n = len(self.num_filters) - 2
-        for i in range(n, -1, -1):
-            input = output + self.num_filters[i]
-            output = self.num_filters[i]
+        for i in range(len(self.num_filters) - 1, 0, -1):
+            input = output
+            output = self.num_filters[i-1]
             self.upsampling_path.append(UpConvBlock(input, output, initializers, padding))
 
         if self.apply_last_layer:
