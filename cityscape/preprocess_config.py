@@ -1,5 +1,7 @@
-raw_data_dir = 'D:\demo\\523\\final_pro\data\City'
-out_dir = 'D:\demo\\523\\final_pro\data\City\\afterPre'
+import os
+
+raw_data_dir = './TestData/City'
+out_dir = './TestData/postprocess/city'
 
 # settings:
 settings = {

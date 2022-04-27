@@ -259,10 +259,10 @@ class ProbabilisticUnet(nn.Module):
         """
         Calculate the KL divergence between the posterior and prior KL(Q||P)
         analytic: calculate KL analytically or via sampling from the posterior
-        calculate_posterior: if we use samapling to approximate KL we can sample here or supply a sample
+        calculate_posterior: if we use sampling to approximate KL we can sample here or supply a sample
         """
         if analytic:
-            # Neeed to add this to torch source code, see: https://github.com/pytorch/pytorch/issues/13545
+            # Need to add this to torch source code, see: https://github.com/pytorch/pytorch/issues/13545
             kl_div = kl.kl_divergence(self.posterior_latent_space, self.prior_latent_space)
         else:
             if calculate_posterior:
@@ -282,12 +282,12 @@ class ProbabilisticUnet(nn.Module):
 
         self.kl = torch.mean(
             self.kl_divergence(analytic=analytic_kl, calculate_posterior=False, z_posterior=z_posterior))
-
         # Here we use the posterior sample sampled above
         self.reconstruction = self.reconstruct(use_posterior_mean=reconstruct_posterior_mean, calculate_posterior=False,
                                                z_posterior=z_posterior)
         reconstruction_loss = criterion(input=self.reconstruction, target=segm.float())
         self.reconstruction_loss = torch.sum(reconstruction_loss)
         self.mean_reconstruction_loss = torch.mean(reconstruction_loss)
+        print("Recons: " + str(self.mean_reconstruction_loss))
 
         return -(self.reconstruction_loss + self.beta * self.kl)

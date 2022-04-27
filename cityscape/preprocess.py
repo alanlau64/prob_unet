@@ -76,4 +76,5 @@ def preprocess(cf):
 
 if __name__ == "__main__":
     cf = imp.load_source('cf', 'preprocess_config.py')
+    os.chdir('../')
     preprocess(cf)
