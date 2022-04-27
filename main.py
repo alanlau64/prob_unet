@@ -2,12 +2,15 @@ import torch
 import numpy as np
 from torch.utils.data import DataLoader
 from torch.utils.data.sampler import SubsetRandomSampler
-from LIDC.load_LIDC import LIDC_IDRI
+# from LIDC.load_LIDC import LIDC_IDRI
+from LIDC.load_LIDC import LIDC
 from prob import ProbabilisticUnet
 from utils import l2_regularisation
+import torchvision.transforms as transforms
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-dataset = LIDC_IDRI(dataset_location = 'data/')
+# dataset = LIDC_IDRI(dataset_location = 'data/')
+dataset = LIDC(train = False, transform = transforms.ToTensor())
 dataset_size = len(dataset)
 indices = list(range(dataset_size))
 split = int(np.floor(0.1 * dataset_size))
@@ -24,7 +27,7 @@ net.to(device)
 optimizer = torch.optim.Adam(net.parameters(), lr=1e-4, weight_decay=0)
 epochs = 10
 for epoch in range(epochs):
-    for step, (patch, mask, _) in enumerate(train_loader):
+    for step, (patch, mask) in enumerate(train_loader):
         patch = patch.to(device)
         mask = mask.to(device)
         mask = torch.unsqueeze(mask,1)
