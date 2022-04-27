@@ -87,14 +87,10 @@ class LIDC(torch.utils.data.Dataset):
         'Generates one sample of data'
         image_path = self.image_paths[idx]
         image = Image.open(image_path)
-        label = np.zeros(image.size)
-        for i in range(4):
-            path = image_path[:-4] + f'_l{i}.png'
-            path = path.replace('images', 'lesions')
-            img = Image.open(path)
-            label += np.array(img).astype(np.float32)
-        label = np.where(label>0, 1, 0)
-
+        label_path = self.image_paths[idx].replace('images', 'labels')
+        label = Image.open(label_path)
+        label = np.array(label).astype(np.float32)
+        label = label/255
         # add convert to jpg
         y = self.transform(label)
         X = self.transform(image)
