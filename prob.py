@@ -1,9 +1,9 @@
 from unet import *
-from utils import init_weights, init_weights_orthogonal_normal, l2_regularisation
+from utils import init_weights, init_weights_orthogonal_normal, l2_regularisation, truncated_normal_
 import torch.nn.functional as F
 from torch.distributions import Normal, Independent, kl
 
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+device = torch.device('cuda' if False else 'cpu')
 
 
 class Encoder(nn.Module):
@@ -43,7 +43,7 @@ class Encoder(nn.Module):
 
         self.layers = nn.Sequential(*layers)
 
-        self.layers.apply(init_weights)
+        # self.layers.apply(init_weights)
 
     def forward(self, input):
         output = self.layers(input)
@@ -76,8 +76,8 @@ class AxisAlignedConvGaussian(nn.Module):
         self.show_enc = 0
         self.sum_input = 0
 
-        nn.init.kaiming_normal_(self.conv_layer.weight, mode='fan_in', nonlinearity='relu')
-        nn.init.normal_(self.conv_layer.bias)
+        # nn.init.kaiming_normal_(self.conv_layer.weight, mode='fan_in', nonlinearity='relu')
+        # truncated_normal_(self.conv_layer.bias)
 
     def forward(self, input, segm=None):
 
@@ -108,8 +108,6 @@ class AxisAlignedConvGaussian(nn.Module):
 
         # This is a multivariate normal with diagonal covariance matrix sigma
         # https://github.com/pytorch/pytorch/pull/11178
-        print(log_sigma.shape)
-        print(log_sigma)
         dist = Independent(Normal(loc=mu, scale=torch.exp(log_sigma)), 1)
         return dist
 
@@ -277,16 +275,15 @@ class ProbabilisticUnet(nn.Module):
         Calculate the evidence lower bound of the log-likelihood of P(Y|X)
         """
 
-        criterion = nn.BCEWithLogitsLoss(size_average=False, reduce=False, reduction=None)
+        criterion = nn.CrossEntropyLoss()
         z_posterior = self.posterior_latent_space.rsample()
 
         self.kl = torch.mean(
             self.kl_divergence(analytic=analytic_kl, calculate_posterior=False, z_posterior=z_posterior))
-
         # Here we use the posterior sample sampled above
         self.reconstruction = self.reconstruct(use_posterior_mean=reconstruct_posterior_mean, calculate_posterior=False,
                                                z_posterior=z_posterior)
-        reconstruction_loss = criterion(input=self.reconstruction, target=segm.float())
+        reconstruction_loss = criterion(input=self.reconstruction, target=segm.long().squeeze(1))
         self.reconstruction_loss = torch.sum(reconstruction_loss)
         self.mean_reconstruction_loss = torch.mean(reconstruction_loss)
 

@@ -6,7 +6,7 @@ from cityscape.city_dataset import CityDataset
 from prob import ProbabilisticUnet
 from utils import l2_regularisation
 
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+device = torch.device('cuda' if False else 'cpu')
 dataset = CityDataset(location=r'D:\demo\\523\\final_pro\data\City\afterPre\half\train')
 dataset_size = len(dataset)
 indices = list(range(dataset_size))
@@ -15,12 +15,11 @@ np.random.shuffle(indices)
 train_indices, test_indices = indices[split:], indices[:split]
 train_sampler = SubsetRandomSampler(train_indices)
 test_sampler = SubsetRandomSampler(test_indices)
-train_loader = DataLoader(dataset, batch_size=1, sampler=train_sampler)
+train_loader = DataLoader(dataset, batch_size=4, sampler=train_sampler)
 test_loader = DataLoader(dataset, batch_size=1, sampler=test_sampler)
 print("Number of training/test patches:", (len(train_indices), len(test_indices)))
 
-net = ProbabilisticUnet(input_channels=3, num_classes=1, num_filters=[32, 64, 128, 192], latent_dim=2, no_convs_fcomb=4,
-                        beta=10.0)
+net = ProbabilisticUnet(input_channels=3, num_classes=34)
 net.to(device)
 optimizer = torch.optim.Adam(net.parameters(), lr=1e-4, weight_decay=0)
 epochs = 10
