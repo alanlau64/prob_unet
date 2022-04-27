@@ -108,6 +108,8 @@ class AxisAlignedConvGaussian(nn.Module):
 
         # This is a multivariate normal with diagonal covariance matrix sigma
         # https://github.com/pytorch/pytorch/pull/11178
+        print(log_sigma.shape)
+        print(log_sigma)
         dist = Independent(Normal(loc=mu, scale=torch.exp(log_sigma)), 1)
         return dist
 
@@ -284,8 +286,7 @@ class ProbabilisticUnet(nn.Module):
         # Here we use the posterior sample sampled above
         self.reconstruction = self.reconstruct(use_posterior_mean=reconstruct_posterior_mean, calculate_posterior=False,
                                                z_posterior=z_posterior)
-
-        reconstruction_loss = criterion(input=self.reconstruction, target=segm)
+        reconstruction_loss = criterion(input=self.reconstruction, target=segm.float())
         self.reconstruction_loss = torch.sum(reconstruction_loss)
         self.mean_reconstruction_loss = torch.mean(reconstruction_loss)
 
