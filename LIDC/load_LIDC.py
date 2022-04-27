@@ -72,11 +72,11 @@ import PIL.Image as Image
 #         return len(self.images)
 
 class LIDC(torch.utils.data.Dataset):
-    def __init__(self, train, transform, data_path='./data/LIDC_DLCV_version'):
+    def __init__(self, set, transform, data_path='./data/LIDC_DLCV_version'):
         'Initialization'
         self.transform = transform
 
-        data_path = os.path.join(data_path, 'train' if train else 'test')
+        data_path = os.path.join(data_path, set)
         self.image_paths = glob.glob(data_path + '/images/*.png')  # changes jpg to png
 
     def __len__(self):
