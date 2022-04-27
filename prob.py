@@ -283,6 +283,8 @@ class ProbabilisticUnet(nn.Module):
         # Here we use the posterior sample sampled above
         self.reconstruction = self.reconstruct(use_posterior_mean=reconstruct_posterior_mean, calculate_posterior=False,
                                                z_posterior=z_posterior)
+        if self.reconstruction.shape[1] == 1:
+            self.reconstruction = torch.cat((self.reconstruction, 1-self.reconstruction), dim=1)
         reconstruction_loss = criterion(input=self.reconstruction, target=segm.long().squeeze(1))
         self.reconstruction_loss = torch.sum(reconstruction_loss)
         self.mean_reconstruction_loss = torch.mean(reconstruction_loss)

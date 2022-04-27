@@ -1,25 +1,30 @@
 import torch
 import numpy as np
+import torchvision
 from torch.utils.data import DataLoader
 from torch.utils.data.sampler import SubsetRandomSampler
+
+from LIDC.load_LIDC import LIDC
 from cityscape.city_dataset import CityDataset
 from prob import ProbabilisticUnet
 from utils import l2_regularisation
 
 device = torch.device('cuda' if False else 'cpu')
-dataset = CityDataset(location=r'D:\demo\\523\\final_pro\data\City\afterPre\half\train')
-dataset_size = len(dataset)
-indices = list(range(dataset_size))
-split = int(np.floor(0.1 * dataset_size))
-np.random.shuffle(indices)
-train_indices, test_indices = indices[split:], indices[:split]
-train_sampler = SubsetRandomSampler(train_indices)
-test_sampler = SubsetRandomSampler(test_indices)
-train_loader = DataLoader(dataset, batch_size=4, sampler=train_sampler)
-test_loader = DataLoader(dataset, batch_size=1, sampler=test_sampler)
-print("Number of training/test patches:", (len(train_indices), len(test_indices)))
+# dataset = CityDataset(location=r'D:\demo\\523\\final_pro\data\City\afterPre\half\train')
+# dataset_size = len(dataset)
+# indices = list(range(dataset_size))
+# split = int(np.floor(0.1 * dataset_size))
+# np.random.shuffle(indices)
+# train_indices, test_indices = indices[split:], indices[:split]
+# train_sampler = SubsetRandomSampler(train_indices)
+# test_sampler = SubsetRandomSampler(test_indices)
+train_dataset = LIDC(train=True, transform=torchvision.transforms.ToTensor())
+test_dataset = LIDC(train=False, transform=torchvision.transforms.ToTensor())
+train_loader = DataLoader(train_dataset, batch_size=4)
+test_loader = DataLoader(test_dataset, batch_size=1)
+print("Number of training/test patches:", (len(train_dataset), len(test_dataset)))
 
-net = ProbabilisticUnet(input_channels=3, num_classes=34)
+net = ProbabilisticUnet(input_channels=1, num_classes=1)
 net.to(device)
 optimizer = torch.optim.Adam(net.parameters(), lr=1e-4, weight_decay=0)
 epochs = 10

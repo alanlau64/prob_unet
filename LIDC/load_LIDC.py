@@ -9,6 +9,7 @@ import pickle
 import glob
 import PIL.Image as Image
 
+
 # class LIDC_IDRI(Dataset):
 #     images = []
 #     labels = []
@@ -71,14 +72,12 @@ import PIL.Image as Image
 #         return len(self.images)
 
 class LIDC(torch.utils.data.Dataset):
-    def __init__(self, train, transform, data_path='./LIDC_crops/LIDC_DLCV_version'):
+    def __init__(self, train, transform, data_path='./data/LIDC_DLCV_version'):
         'Initialization'
         self.transform = transform
 
         data_path = os.path.join(data_path, 'train' if train else 'test')
-        image_classes = [os.path.split(d)[1] for d in glob.glob(data_path + '/*') if os.path.isdir(d)]
-        self.name_to_label = {c: id for id, c in enumerate(image_classes)}
-        self.image_paths = glob.glob(data_path + '/*/*.png') # changes jpg to png
+        self.image_paths = glob.glob(data_path + '/images/*.png')  # changes jpg to png
 
     def __len__(self):
         'Returns the total number of samples'
@@ -87,16 +86,23 @@ class LIDC(torch.utils.data.Dataset):
     def __getitem__(self, idx):
         'Generates one sample of data'
         image_path = self.image_paths[idx]
+        image = Image.open(image_path)
+        label = np.zeros(image.size)
+        for i in range(4):
+            path = image_path[:-4] + f'_l{i}.png'
+            path = path.replace('images', 'lesions')
+            img = Image.open(path)
+            label += np.array(img).astype(np.float32)
+        label = np.where(label>0, 1, 0)
 
-        image = Image.open(image_path).convert('RGB') # add convert to jpg
-
-        c = os.path.split(os.path.split(image_path)[0])[1]
-        y = self.name_to_label[c]
+        # add convert to jpg
+        y = self.transform(label)
         X = self.transform(image)
         return X, y
 
     def get_num_classes(self):
         return 2
+
 
 if __name__ == '__main__':
     dataset = LIDC(train=True, transform=None, data_path='./LIDC_crops/LIDC_DLCV_version')
