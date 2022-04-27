@@ -106,7 +106,7 @@ for step, (patch, mask) in enumerate(test_loader):
         out = net.sample(testing=True)
         if out.shape[1] == 1:
             out = torch.cat((out, 1 - out), dim=1)
-        iou += mIOU(mask, out, 34)
+        iou += mIOU(mask, out, 2)
         out = torch.max(out, 1, True).indices
         acc += (torch.sum(out == mask) / mask.nelement())
         cnt += 1
