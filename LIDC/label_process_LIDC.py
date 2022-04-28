@@ -4,7 +4,7 @@ import numpy as np
 from PIL import Image
 
 data_path = '../data/LIDC_DLCV_version'
-sets = ['test', 'train', 'val']
+sets = ['test']
 
 for set in sets:
     set_path = os.path.join(data_path, set)

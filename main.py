@@ -55,7 +55,7 @@ def iou_1class(outputs: torch.Tensor, labels: torch.Tensor):
     return thresholded  # Or thresholded.mean() if you are interested in average across the batch
 
 torch.random.manual_seed(42)
-device = torch.device('cuda' if False else 'cpu')
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 # train_dataset = CityDataset(location='../data/postprocess/city/quarter/train')
 # val_dataset = CityDataset(location='../data/postprocess/city/quarter/val')
 # test_dataset = CityDataset(location='../data/postprocess/city/quarter/test')
@@ -90,7 +90,7 @@ for epoch in range(epochs):
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
-        if current_step % 100 == 0:
+        if current_step % 200 == 0:
             print("Start validating")
             print("------------------")
             net.eval()

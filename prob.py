@@ -1,3 +1,5 @@
+import torch.cuda
+
 from unet import *
 from utils import init_weights, init_weights_orthogonal_normal, l2_regularisation, truncated_normal_
 import torch.nn.functional as F
@@ -88,7 +90,7 @@ class AxisAlignedConvGaussian(nn.Module):
             input = torch.cat((input, segm), dim=1)
             self.show_concat = input
             self.sum_input = torch.sum(input)
-
+        print(input.device)
         encoding = self.encoder(input)
         self.show_enc = encoding
 
