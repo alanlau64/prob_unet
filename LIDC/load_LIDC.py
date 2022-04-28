@@ -88,9 +88,10 @@ class LIDC(torch.utils.data.Dataset):
         image_path = self.image_paths[idx]
         image = Image.open(image_path)
         label_path = self.image_paths[idx].replace('images', 'labels')
+        print(label_path)
         label = Image.open(label_path)
         label = np.array(label).astype(np.float32)
-        label = label/255
+        label = np.where(label>0, 1, 0)
         # add convert to jpg
         y = self.transform(label)
         X = self.transform(image)

@@ -90,7 +90,6 @@ class AxisAlignedConvGaussian(nn.Module):
             input = torch.cat((input, segm), dim=1)
             self.show_concat = input
             self.sum_input = torch.sum(input)
-        print(input.device)
         encoding = self.encoder(input)
         self.show_enc = encoding
 

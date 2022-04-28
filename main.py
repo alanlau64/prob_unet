@@ -43,19 +43,18 @@ def iou_1class(outputs: torch.Tensor, labels: torch.Tensor):
     # You can comment out this line if you are passing tensors of equal shape
     # But if you are passing output from UNet or something it will most probably
     # be with the BATCH x 1 x H x W shape
-    outputs = outputs.squeeze(1)  # BATCH x 1 x H x W => BATCH x H x W
-
-    intersection = (outputs & labels).float().sum((1, 2))  # Will be zero if Truth=0 or Prediction=0
-    union = (outputs | labels).float().sum((1, 2))  # Will be zzero if both are 0
-
-    iou = (intersection + SMOOTH) / (union + SMOOTH)  # We smooth our devision to avoid 0/0
-
-    thresholded = torch.clamp(20 * (iou - 0.5), 0, 10).ceil() / 10  # This is equal to comparing with thresolds
-
-    return thresholded  # Or thresholded.mean() if you are interested in average across the batch
+    # outputs = outputs.squeeze(1)  # BATCH x 1 x H x W => BATCH x H x W
+    labels = labels / labels.max()
+    outputs = outputs / outputs.max()
+    outidx = (outputs == 1)
+    labelidx = (labels != 0)
+    intersection = outidx[labelidx].long().sum()
+    union = outidx.long().sum() + (labelidx.long().sum()) - intersection
+    iou = (float(intersection) + SMOOTH) / (float(union) + SMOOTH)
+    return iou  # Or thresholded.mean() if you are interested in average across the batch
 
 torch.random.manual_seed(42)
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+device = torch.device('cuda' if False else 'cpu')
 # train_dataset = CityDataset(location='../data/postprocess/city/quarter/train')
 # val_dataset = CityDataset(location='../data/postprocess/city/quarter/val')
 # test_dataset = CityDataset(location='../data/postprocess/city/quarter/test')
@@ -70,7 +69,7 @@ print("Number of training/val patches/test patches:", (len(train_dataset), len(v
 net = ProbabilisticUnet(input_channels=1, num_classes=1)
 net.to(device)
 optimizer = torch.optim.Adam(net.parameters(), lr=1e-4, weight_decay=0)
-epochs = 10
+epochs = 0
 current_step = 0
 max_val_loss = 100000
 for epoch in range(epochs):
@@ -126,7 +125,9 @@ for step, (patch, mask) in enumerate(test_loader):
             out = torch.cat((out, 1 - out), dim=1)
         # iou += mIOU(mask, out, 2)
         out = torch.max(out, 1, True).indices
-        iou += iou_1class(mask, out).mean()
+        iou_this = iou_1class(mask, out)
+        print(iou_this)
+        iou += iou_this
         acc += (torch.sum(out == mask) / mask.nelement())
         cnt += 1
 
