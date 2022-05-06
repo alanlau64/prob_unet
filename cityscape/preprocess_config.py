@@ -1,3 +1,4 @@
+# path
 raw_data_dir = 'D:\demo\\523\\final_pro\data\City'
 out_dir = 'D:\demo\\523\\final_pro\data\City\\afterPre'
 
@@ -9,4 +10,5 @@ settings = {
             'label_modalities': ['labelIds']},
 }
 
+# channel format
 data_format = 'NCHW'

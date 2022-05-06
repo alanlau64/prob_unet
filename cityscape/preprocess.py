@@ -4,9 +4,13 @@ from tqdm import tqdm
 from PIL import Image
 import imp
 
+# preprocess of cityscape dataset
+
+# the scale of resize
 resolution_map = {1.0: 'full', 0.5: 'half', 0.25: 'quarter'}
 
 
+# resize the pic with given scale
 def resample(img, scale_factor=1.0, interpolation=Image.BILINEAR):
     width, height = img.size
     basewidth = width * scale_factor
@@ -16,6 +20,7 @@ def resample(img, scale_factor=1.0, interpolation=Image.BILINEAR):
     return img.resize((basewidth, hsize), interpolation)
 
 
+# load the path of the pic
 def recursive_mkdir(nested_dir_list):
     nested_dir = ''
     for dir in nested_dir_list:
@@ -25,14 +30,16 @@ def recursive_mkdir(nested_dir_list):
     return
 
 
+# preprocess with the config file
 def preprocess(cf):
     for set in list(cf.settings.keys()):
         print('Processing {} set.'.format(set))
 
-        # image dir
+        # load the path of original pic
         image_dir = os.path.join(cf.raw_data_dir, 'leftImg8bit', set)
         city_names = os.listdir(image_dir)
 
+        # preprocess each pic of each city
         for city in city_names:
             print('Processing {}'.format(city))
             city_dir = os.path.join(image_dir, city)
@@ -43,9 +50,10 @@ def preprocess(cf):
                 for scale in cf.settings[set]['resolutions']:
                     recursive_mkdir([cf.out_dir, resolution_map[scale], set, city])
 
-                    # image
+                    # load the path of original pic
                     img_path = os.path.join(city_dir, img_spec + '_leftImg8bit.png')
                     img = Image.open(img_path)
+                    # resize the pic
                     if scale != 1.0:
                         img = resample(img, scale_factor=scale, interpolation=Image.BILINEAR)
                     img_out_path = os.path.join(cf.out_dir, resolution_map[scale], set, city,
@@ -53,22 +61,25 @@ def preprocess(cf):
                     img_arr = np.array(img).astype(np.float32)
 
                     channel_axis = 0 if img_arr.shape[0] == 3 else 2
+                    # transfer the channel location
                     if cf.data_format == 'NCHW' and channel_axis != 0:
                         img_arr = np.transpose(img_arr, axes=[2, 0, 1])
                     np.save(img_out_path, img_arr)
 
-                    # labels
+                    # preprocess the labels
                     for label_density in cf.settings[set]['label_densities']:
                         label_dir = os.path.join(cf.raw_data_dir, label_density, set, city)
                         for mod in cf.settings[set]['label_modalities']:
                             label_spec = img_spec + '_{}_{}'.format(label_density, mod)
                             label_path = os.path.join(label_dir, label_spec + '.png')
                             label = Image.open(label_path)
+                            # resize the pic
                             if scale != 1.0:
                                 label = resample(label, scale_factor=scale, interpolation=Image.NEAREST)
                             label_out_path = os.path.join(cf.out_dir, resolution_map[scale], set, city,
                                                           label_spec + '.npy')
                             label_arr = np.array(label).astype(np.uint8)
+                            # transfer the channel location
                             if cf.data_format == 'NCHW' and channel_axis != 0:
                                 label_arr = label_arr[np.newaxis, :, :]
                             np.save(label_out_path, label_arr)

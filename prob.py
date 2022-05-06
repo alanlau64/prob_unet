@@ -2,12 +2,12 @@ import torch.cuda
 
 from unet import *
 from utils import init_weights, init_weights_orthogonal_normal, l2_regularisation, truncated_normal_
-import torch.nn.functional as F
 from torch.distributions import Normal, Independent, kl
 
 device = torch.device('cuda' if False else 'cpu')
 
 
+# the encoder in the prior and posterior net
 class Encoder(nn.Module):
     """
     A convolutional neural network, consisting of len(num_filters) times a block of no_convs_per_block convolutional layers,
@@ -21,21 +21,20 @@ class Encoder(nn.Module):
         self.num_filters = num_filters
 
         if posterior:
-            # To accomodate for the mask that is concatenated at the channel axis, we increase the input_channels.
+            # To accommodate for the mask that is concatenated at the channel axis, increase the input_channels.
             self.input_channels += 1
 
         layers = []
         for i in range(len(self.num_filters)):
-            """
-            Determine input_dim and output_dim of conv layers in this block. The first layer is input x output,
-            All the subsequent layers are output x output.
-            """
+            # Determine input_dim and output_dim of conv layers in this block. The first layer is input x output,
             input_dim = self.input_channels if i == 0 else output_dim
             output_dim = num_filters[i]
 
+            # pooling layer can't be the first layer
             if i != 0:
                 layers.append(nn.AvgPool2d(kernel_size=2, stride=2, padding=0, ceil_mode=True))
 
+            # add conv layer and activation layer
             layers.append(nn.Conv2d(input_dim, output_dim, kernel_size=3, padding=int(padding)))
             layers.append(nn.ReLU(inplace=True))
 
@@ -44,8 +43,6 @@ class Encoder(nn.Module):
                 layers.append(nn.ReLU(inplace=True))
 
         self.layers = nn.Sequential(*layers)
-
-        # self.layers.apply(init_weights)
 
     def forward(self, input):
         output = self.layers(input)
@@ -69,17 +66,16 @@ class AxisAlignedConvGaussian(nn.Module):
             self.name = 'Posterior'
         else:
             self.name = 'Prior'
+        # add the encoder
         self.encoder = Encoder(self.input_channels, self.num_filters, self.no_convs_per_block, initializers,
                                posterior=self.posterior)
+        # add the conv layer to output the sample in the latent space
         self.conv_layer = nn.Conv2d(num_filters[-1], 2 * self.latent_dim, (1, 1), stride=1)
         self.show_img = 0
         self.show_seg = 0
         self.show_concat = 0
         self.show_enc = 0
         self.sum_input = 0
-
-        # nn.init.kaiming_normal_(self.conv_layer.weight, mode='fan_in', nonlinearity='relu')
-        # truncated_normal_(self.conv_layer.bias)
 
     def forward(self, input, segm=None):
 
@@ -93,7 +89,7 @@ class AxisAlignedConvGaussian(nn.Module):
         encoding = self.encoder(input)
         self.show_enc = encoding
 
-        # We only want the mean of the resulting hxw image
+        # calculate the mean of the resulting hxw image
         encoding = torch.mean(encoding, dim=2, keepdim=True)
         encoding = torch.mean(encoding, dim=3, keepdim=True)
 
@@ -108,7 +104,6 @@ class AxisAlignedConvGaussian(nn.Module):
         log_sigma = mu_log_sigma[:, self.latent_dim:]
 
         # This is a multivariate normal with diagonal covariance matrix sigma
-        # https://github.com/pytorch/pytorch/pull/11178
         dist = Independent(Normal(loc=mu, scale=torch.exp(log_sigma)), 1)
         return dist
 
@@ -186,7 +181,6 @@ class Fcomb(nn.Module):
 
 class ProbabilisticUnet(nn.Module):
     """
-    A probabilistic UNet (https://arxiv.org/abs/1806.05034) implementation.
     input_channels: the number of channels in the image (1 for greyscale and 3 for RGB)
     num_classes: the number of classes to predict
     num_filters: is a list consisint of the amount of filters layer
@@ -207,12 +201,16 @@ class ProbabilisticUnet(nn.Module):
         self.beta = beta
         self.z_prior_sample = 0
 
+        # unet in the prob-unet
         self.unet = Unet(self.input_channels, self.num_classes, self.num_filters, self.initializers,
                          apply_last_layer=False, padding=True).to(device)
+        # prior encoder
         self.prior = AxisAlignedConvGaussian(self.input_channels, self.num_filters, self.no_convs_per_block,
                                              self.latent_dim, self.initializers, ).to(device)
+        # posterior encoder
         self.posterior = AxisAlignedConvGaussian(self.input_channels, self.num_filters, self.no_convs_per_block,
                                                  self.latent_dim, self.initializers, posterior=True).to(device)
+        # net used to reconstruct the pic
         self.fcomb = Fcomb(self.num_filters, self.latent_dim, self.input_channels, self.num_classes,
                            self.no_convs_fcomb, {'w': 'orthogonal', 'b': 'normal'}, use_tile=True).to(device)
 
@@ -221,6 +219,7 @@ class ProbabilisticUnet(nn.Module):
         Construct prior latent space for patch and run patch through UNet,
         in case training is True also construct posterior latent space
         """
+        # only use the posterior for training
         if training:
             self.posterior_latent_space = self.posterior.forward(patch, segm)
         self.prior_latent_space = self.prior.forward(patch)
@@ -258,10 +257,10 @@ class ProbabilisticUnet(nn.Module):
         """
         Calculate the KL divergence between the posterior and prior KL(Q||P)
         analytic: calculate KL analytically or via sampling from the posterior
-        calculate_posterior: if we use samapling to approximate KL we can sample here or supply a sample
+        calculate_posterior: if we use sampling to approximate KL we can sample here or supply a sample
         """
         if analytic:
-            # Neeed to add this to torch source code, see: https://github.com/pytorch/pytorch/issues/13545
+            # calculate the kl divergence of the prior and posterior distribution
             kl_div = kl.kl_divergence(self.posterior_latent_space, self.prior_latent_space)
         else:
             if calculate_posterior:
@@ -276,16 +275,20 @@ class ProbabilisticUnet(nn.Module):
         Calculate the evidence lower bound of the log-likelihood of P(Y|X)
         """
 
+        # use cross entropy to measure the differences of the output and label pic
         criterion = nn.CrossEntropyLoss()
+        # sampling from posterior distribution
         z_posterior = self.posterior_latent_space.rsample()
 
+        # calculate the kl divergence of the distribution of the prior and the posterior
         self.kl = torch.mean(
             self.kl_divergence(analytic=analytic_kl, calculate_posterior=False, z_posterior=z_posterior))
-        # Here we use the posterior sample sampled above
+        # use the Fcomb net to reconstruct img
         self.reconstruction = self.reconstruct(use_posterior_mean=reconstruct_posterior_mean, calculate_posterior=False,
                                                z_posterior=z_posterior)
         if self.reconstruction.shape[1] == 1:
-            self.reconstruction = torch.cat((self.reconstruction, 1-self.reconstruction), dim=1)
+            self.reconstruction = torch.cat((self.reconstruction, 1 - self.reconstruction), dim=1)
+        # calculate the loss of the output and label pic
         reconstruction_loss = criterion(input=self.reconstruction, target=segm.long().squeeze(1))
         self.reconstruction_loss = torch.sum(reconstruction_loss)
         self.mean_reconstruction_loss = torch.mean(reconstruction_loss)

@@ -6,11 +6,12 @@ from PIL import Image
 SMOOTH = 1e-6
 
 
+# method to calculate the iou of one image
 def iou_numpy(outputs: np.array, labels: np.array):
     outputs = outputs / outputs.max()
     labels = labels / labels.max()
-    outidx = (outputs==1)
-    labelidx = (labels!=0)
+    outidx = (outputs == 1)
+    labelidx = (labels != 0)
     intersection = outputs[labelidx].long().sum().items()
     union = outputs.long().sum().items() + (labels.long().sum().items()) - intersection
     iou = (float(intersection) + SMOOTH) / (float(union) + SMOOTH)

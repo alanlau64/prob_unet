@@ -69,9 +69,11 @@ print("Number of training/val patches/test patches:", (len(train_dataset), len(v
 net = ProbabilisticUnet(input_channels=1, num_classes=1)
 net.to(device)
 optimizer = torch.optim.Adam(net.parameters(), lr=1e-4, weight_decay=0)
-epochs = 0
+epochs = 50
 current_step = 0
 max_val_loss = 100000
+training_losses = []
+val_losses = []
 for epoch in range(epochs):
     print(f"Epoch {epoch + 1}")
     for step, (patch, mask) in enumerate(train_loader):
@@ -86,6 +88,9 @@ for epoch in range(epochs):
         loss = -elbo + 1e-5 * reg_loss
         if current_step % 25 == 0:
             print(f"Training Loss = {loss.item()}")
+        if current_step % 100 == 0:
+            print(f"Recording Loss")
+            training_losses.append(loss.detach())
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
@@ -94,15 +99,17 @@ for epoch in range(epochs):
             print("------------------")
             net.eval()
             val_loss = 0
-            for step, (val_patch, val_mask) in enumerate(val_loader):
-                val_patch = val_patch.to(device)
-                val_mask = val_mask.to(device)
-                net.forward(val_patch, val_mask, training=False)
-                val_elbo = net.elbo(val_mask, analytic_kl=False)
-                val_loss += -elbo + 1e-5 * l2_regularisation(net.posterior) + l2_regularisation(
-                    net.prior) + l2_regularisation(net.fcomb.layers)
-            val_loss /= len(val_loader)
-            print(f"Validation Loss = {val_loss}")
+            with torch.no_grad():
+                for step, (val_patch, val_mask) in enumerate(val_loader):
+                    val_patch = val_patch.to(device)
+                    val_mask = val_mask.to(device)
+                    net.forward(val_patch, val_mask, training=False)
+                    val_elbo = net.elbo(val_mask, analytic_kl=False)
+                    val_loss += -val_elbo + 1e-5 * l2_regularisation(net.posterior) + l2_regularisation(
+                        net.prior) + l2_regularisation(net.fcomb.layers)
+                val_loss /= len(val_loader)
+                print(f"Validation Loss = {val_loss}")
+                val_losses.append(val_loss.detach())
             print("-------------------")
             if val_loss < max_val_loss:
                 print("Saving model")
@@ -125,9 +132,7 @@ for step, (patch, mask) in enumerate(test_loader):
             out = torch.cat((out, 1 - out), dim=1)
         # iou += mIOU(mask, out, 2)
         out = torch.max(out, 1, True).indices
-        iou_this = iou_1class(mask, out)
-        print(iou_this)
-        iou += iou_this
+        iou += iou_1class(mask, out)
         acc += (torch.sum(out == mask) / mask.nelement())
         cnt += 1
 
