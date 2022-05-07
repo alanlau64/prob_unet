@@ -259,7 +259,7 @@ class ProbabilisticUnet(nn.Module):
         """
         Calculate the KL divergence between the posterior and prior KL(Q||P)
         analytic: calculate KL analytically or via sampling from the posterior
-        calculate_posterior: if we use samapling to approximate KL we can sample here or supply a sample
+        calculate_posterior: if we use sampling to approximate KL we can sample here or supply a sample
         """
         if analytic:
             # Neeed to add this to torch source code, see: https://github.com/pytorch/pytorch/issues/13545
